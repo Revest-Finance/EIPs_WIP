@@ -30,7 +30,7 @@ All EIP-7777 Standardized Time Locks locks MUST implement [ERC-165](./eip-165.md
 
 pragma solidity ^0.8.0;
 
-interface TimelockWithMaturity {
+interface TimelockMaturity {
     /
      * @notice      This function returns the timestamp that the time lock specified by `id` unlocks at
      * @param       id The identifier which describes a specific time lock
@@ -60,7 +60,7 @@ $$ C = N(d_1)S_t - N(d_2)Ke^{-ert} $$
 
 $$ \text {where } \small d_1 = \frac{\ln\frac{S_t}{K} + (r + \frac{\sigma^2}{2})}{\sigma \sqrt t} \text{ and } d2 = d1 - \sigma \sqrt t$$
 
-$ \small \text {* } C =  \text {call option price} $
+-  $ \small C $ =  call option price
 
 -  $ \small N =  \text {CDF of the normal distribution} $
 
@@ -90,12 +90,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract LockedERC20ExampleContract implements TimelockWithMaturity{
+contract LockedERC20ExampleContract implements TimelockMaturity{
     ERC20 public token;
-    string public name;
-    string public symbol;
-    uint256 public override totalSupply;
-    bytes32 private currentId;
+    uint256 public override totalLocked;
 
     //Timelock struct
     struct TimeLock {
@@ -115,34 +112,33 @@ contract LockedERC20ExampleContract implements TimelockWithMaturity{
         string memory _symbol
     ) public {
         token = ERC20(_token);
-        name = _name;
-        symbol = _symbol;
-        totalSupply = 0;
-        currentId = 0;
+        totalLocked = 0;
     }
 
     //Maturity is not appropriate
-    error InvalidInputMaturity();
     error LockPeriodOngoing();
     error InvalidReceiver();
+    error TransferFailed();
 
-    /// @dev Deposit tokens to be locked until the end of the requested period
+    /// @dev Deposit tokens to be locked in the requested locking period
     /// @param amount The amount of tokens to deposit
-    function deposit(uint256 amount, uint256 lockingPeriod) public {
+    /// @param lockingPeriod length of locking period for the tokens to be locked
+    function deposit(uint256 amount, uint256 lockingPeriod) public returns (bytes32 lockId) {
         uint256 maturity = block.timestamp + lockingPeriod;
+        lockedId = keccack256(abi.encoded(msg.sender, amount, maturity))
 
-        TimeLock newLock = new TimeLock(msg.sender, amount, maturity, currentId++);
+        TimeLock memory newLock = TimeLock(msg.sender, amount, maturity, lockedId);
 
-        totalSupply += amount;
+        totalLocked += amount;
 
         if (!token.transferFrom(msg.sender, address(this), amount)) {
             revert TransferFailed();
         }
 
-        emit Transfer(msg.sender, address(this), amount);
+        lockedId = keccack256(abi.encoded(msg.sender, amount, maturity));
     }
 
-    /// @dev Withdraw tokens after the end of the locking period or during the deposit period
+    /// @dev Withdraw tokens in the lock after the end of the locking period
     /// @param lockId id of the lock that user have deposited in
     function withdraw(bytes32 lockId) public {
         TimeLock lock = idToLock[lockId];
@@ -159,18 +155,11 @@ contract LockedERC20ExampleContract implements TimelockWithMaturity{
             revert LockPeriodOngoing();
         }
 
-        totalSupply -= amount;
+        totalLocked -= amount;
 
         if (!token.transfer(msg.sender, amount)) {
-        revert TransferFailed();
+            revert TransferFailed();
         }
-
-        emit Transfer(address(this), msg.sender, amount);
-    }
-
-    /// @dev Returns the number of decimals of the locked token
-    function decimals() public view returns (uint8) {
-        return token.decimals();
     }
 
     function getMaturity(bytes32 id) external view returns (uint256 maturity) {
