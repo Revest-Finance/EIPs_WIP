@@ -60,7 +60,8 @@ $$ C = N(d_1)S_t - N(d_2)Ke^{-ert} $$
 
 $$ \text {where } \small d_1 = \frac{\ln\frac{S_t}{K} + (r + \frac{\sigma^2}{2})}{\sigma \sqrt t} \text{ and } d2 = d1 - \sigma \sqrt t$$
 
--  $ C $ =  call option price
+ $ \small C =  \text {call option price} $
+ $ \small N =  \text {CDF of the normal distribution} $
 
 -  $ \small N =  \text {CDF of the normal distribution} $
 
