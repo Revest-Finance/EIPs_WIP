@@ -85,7 +85,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract LockedERC20ExampleContract implements TimelockMaturity{
-    ERC20 public token;
+    ERC20 immutable public token;
     uint256 public override totalLocked;
 
     //Timelock struct
@@ -106,7 +106,6 @@ contract LockedERC20ExampleContract implements TimelockMaturity{
         string memory _symbol
     ) public {
         token = ERC20(_token);
-        totalLocked = 0;
     }
 
     //Maturity is not appropriate
@@ -119,7 +118,7 @@ contract LockedERC20ExampleContract implements TimelockMaturity{
     /// @param lockingPeriod length of locking period for the tokens to be locked
     function deposit(uint256 amount, uint256 lockingPeriod) public returns (bytes32 lockId) {
         uint256 maturity = block.timestamp + lockingPeriod;
-        lockedId = keccack256(abi.encoded(msg.sender, amount, maturity))
+        lockedId = keccack256(abi.encode(msg.sender, amount, maturity));
 
         TimeLock memory newLock = TimeLock(msg.sender, amount, maturity, lockedId);
 
@@ -129,29 +128,26 @@ contract LockedERC20ExampleContract implements TimelockMaturity{
             revert TransferFailed();
         }
 
-        lockedId = keccack256(abi.encoded(msg.sender, amount, maturity));
+        idToLock[lockedId] = newLock;
+        
     }
 
     /// @dev Withdraw tokens in the lock after the end of the locking period
     /// @param lockId id of the lock that user have deposited in
     function withdraw(bytes32 lockId) public {
-        TimeLock lock = idToLock[lockId];
+        TimeLock memory lock = idToLock[lockId];
 
-        address owner =  lock.owner;
-        uint256 currentMaturity = lock.maturity;
-        uint256 amount = lock.amount;
-
-        if (msg.sender != owner) {
+        if (msg.sender != lock.owner) {
             revert InvalidReceiver();
         }
 
-        if (block.timestamp > currentMaturity) {
+        if (block.timestamp > lock.maturity) {
             revert LockPeriodOngoing();
         }
 
-        totalLocked -= amount;
+        totalLocked -= lock.amount;
 
-        if (!token.transfer(msg.sender, amount)) {
+        if (!token.transfer(msg.sender, lock.amount)) {
             revert TransferFailed();
         }
     }
