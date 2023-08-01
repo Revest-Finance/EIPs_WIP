@@ -85,8 +85,8 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract LockedERC20ExampleContract implements TimelockMaturity{
-    ERC20 immutable public token;
-    uint256 public override totalLocked;
+    ERC20 public immutable token;
+    uint256 public totalLocked;
 
     //Timelock struct
     struct TimeLock {
@@ -97,13 +97,10 @@ contract LockedERC20ExampleContract implements TimelockMaturity{
     }
 
     //maps lockId to balance of the lock
-    mapping(bytes32 => TimeLock) public override idToLock;    
+    mapping(bytes32 => TimeLock) public idToLock;    
 
     function constructor(
-        address _owner,
         address _token,
-        string memory _name,
-        string memory _symbol
     ) public {
         token = ERC20(_token);
     }
@@ -116,25 +113,27 @@ contract LockedERC20ExampleContract implements TimelockMaturity{
     /// @dev Deposit tokens to be locked in the requested locking period
     /// @param amount The amount of tokens to deposit
     /// @param lockingPeriod length of locking period for the tokens to be locked
-    function deposit(uint256 amount, uint256 lockingPeriod) public returns (bytes32 lockId) {
+    function deposit(uint256 amount, uint256 lockingPeriod) external returns (bytes32 lockId) {
         uint256 maturity = block.timestamp + lockingPeriod;
-        lockedId = keccack256(abi.encode(msg.sender, amount, maturity));
+        lockId = keccack256(abi.encode(msg.sender, amount, maturity));
 
-        TimeLock memory newLock = TimeLock(msg.sender, amount, maturity, lockedId);
-
-        totalLocked += amount;
+        require(idToLock[lockId].maturity == 0, "lock already exists");
 
         if (!token.transferFrom(msg.sender, address(this), amount)) {
             revert TransferFailed();
         }
 
-        idToLock[lockedId] = newLock;
+        TimeLock memory newLock = TimeLock(msg.sender, amount, maturity, lockedId);
+
+        totalLocked += amount;
+
+        idToLock[lockId] = newLock;
         
     }
 
     /// @dev Withdraw tokens in the lock after the end of the locking period
     /// @param lockId id of the lock that user have deposited in
-    function withdraw(bytes32 lockId) public {
+    function withdraw(bytes32 lockId) external {
         TimeLock memory lock = idToLock[lockId];
 
         if (msg.sender != lock.owner) {
@@ -147,9 +146,13 @@ contract LockedERC20ExampleContract implements TimelockMaturity{
 
         totalLocked -= lock.amount;
 
+        //State cleanup
+        delete idToLock[lockId];
+
         if (!token.transfer(msg.sender, lock.amount)) {
             revert TransferFailed();
         }
+
     }
 
     function getMaturity(bytes32 id) external view returns (uint256 maturity) {
