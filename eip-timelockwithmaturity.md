@@ -60,22 +60,13 @@ $$ C = N(d_1)S_t - N(d_2)Ke^{-ert} $$
 
 $$ \text {where } \small d_1 = \frac{\ln\frac{S_t}{K} + (r + \frac{\sigma^2}{2})}{\sigma \sqrt t} \text{ and } d2 = d1 - \sigma \sqrt t$$
 
- $C$ = call option price
-
-
+-  $C=\text{call option price}$
 -  $N=\text{CDF of the normal distribution}$
-
--  $ \small N =  \text {CDF of the normal distribution} $
-
--  $ \small S_t =  \text {spot price of an asset} $
-
--  $ \small K =  \text {strike price} $
-
--  $ \small r =  \text {risk-free interest rate} $
-
--  $ \small t =  \text {time to maturity} $
-
--  $ \small \sigma =  \text {volatility of the asset}$
+-  $S_t=\text{spot price of an asset}$
+-  $K=\text{strike price}$
+-  $r=\text{risk-free interest rate}$
+-  $t=\text{time to maturity}$
+-  $\sigma=\text{volatility of the asset}$
 
 Time to maturity plays an important role in evaluating the price of timelocked assets, thus the demand to have a common interface for retrieving the data is inevitable. 
 
