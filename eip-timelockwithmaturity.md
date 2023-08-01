@@ -63,7 +63,7 @@ $$ \text {where } \small d_1 = \frac{\ln\frac{S_t}{K} + (r + \frac{\sigma^2}{2})
  $C$ = call option price
 
 
--  $\small N=\text{CDF of the normal distribution}$
+-  $N=\text{CDF of the normal distribution}$
 
 -  $ \small N =  \text {CDF of the normal distribution} $
 
